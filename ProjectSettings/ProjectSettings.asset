@@ -586,7 +586,9 @@ PlayerSettings:
   webGLLinkerTarget: 1
   webGLThreadsSupport: 0
   webGLWasmStreaming: 0
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    1: LEAPMOTIONCORE_PRESENT
+    14: LEAPMOTIONCORE_PRESENT
   platformArchitecture: {}
   scriptingBackend:
     Standalone: 1
