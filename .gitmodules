@@ -1,3 +1,6 @@
 [submodule "Assets/MixedRealityToolkit-Unity"]
 	path = Assets/MixedRealityToolkit-Unity
 	url = ../../microsoft/MixedRealityToolkit-Unity.git
+[submodule "Assets/MRTK-Quest"]
+	path = Assets/MRTK-Quest
+	url = ../../provencher/MRTK-Quest.git
