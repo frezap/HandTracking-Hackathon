@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Unity/Scenes/SampleScene.unity
-    guid: d1c3109bdb54ad54c8a2b2838528e640
+    path: Assets/WIPScene_Oculus.unity
+    guid: c6eab64d54ab9b6419782adb23d87ffa
   m_configObjects: {}
