@@ -1,94 +1,133 @@
-﻿using JetBrains.Annotations;
-using Microsoft.MixedReality.Toolkit.Utilities;
+﻿using Microsoft.MixedReality.Toolkit.Utilities;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
+using UnityEngine.XR;
 
 [Serializable]
 public struct HandPose
 {
-    public string Name;
-    public List<Quaternion> LocalRotations;
-    public Handedness Handedness;
+    public HandPoseName name;
+    [HideInInspector]
+    public List<Vector3> localPositions;
+    [HideInInspector]
+    public List<Quaternion> localRotations;
+    [HideInInspector]
+    public List<Vector3> Positions;
+    [HideInInspector]
+    public List<Quaternion> Rotations;
+    [HideInInspector]
+    public List<Vector3> relativePositions;
+    public Handedness handedness;
+}
+
+public enum HandPoseName
+{
+    None,
+    New,
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Stop,
+    Open,
+    ThumbsUp,
+    Pinch,
+    PinchGrab
 }
 
 public class pkratten_HandPose : MonoBehaviour
 {
-    public pkratten_MRTKHands Hands;
-    public float Tolerance;
     public HandPose currentPose;
+    public float Tolerance;
+    public pkratten_MRTKHands Hands;
+    public Record record = Record.None;
     public List<HandPose> Poses;
-    public Record record = Record.Off;
 
     public enum Record
     {
-        Off,
+        None,
         Right,
         Left
     }
 
-    // Start is called before the first frame update
-    void Start()
+    Handedness ComparePose(HandPose pose)
     {
-        
+        Handedness handedness = Handedness.None;
+
+        int countR = 2;
+        int countL = 2;
+
+        for (int i = 2; i < pose.Positions.Count; i++)
+        {
+            Vector3 relativePosition = Hands.HandRight[1].transform.InverseTransformPoint(Hands.HandRight[i].position);
+            if (Vector3.Distance(relativePosition, pose.relativePositions[i]) < Tolerance) countR++;
+            relativePosition = Vector3.Reflect(relativePosition, Vector3.right);
+            if (Vector3.Distance(relativePosition, pose.relativePositions[i]) < Tolerance) countL++;
+        }
+
+        if (countR == pose.Positions.Count) handedness = Handedness.Right;
+        if (countL == pose.Positions.Count) handedness = Handedness.Left;
+
+        return handedness;
     }
 
-    bool ComparePose(List<Transform> hand, List<Quaternion> pose)
+    void SavePose()
     {
-        bool equals = true;
-        for (int i = 2; i < hand.Count; i++)
-        {
-            double angle = Quaternion.Angle(hand[i].localRotation, pose[i]);
-            if(angle > Tolerance)
-            {
-                equals = false;
-                break;
-            }
-        }
-        return equals;
-    }
-
-    HandPose empty = new HandPose();
-
-    // Update is called once per frame
-    void Update()
-    {
-        bool foundPose = false;
-        foreach (var pose in Poses)
-        {
-            Handedness handedness = Handedness.None;
-            if(ComparePose(Hands.HandRight, pose.LocalRotations)) handedness = Handedness.Right;
-            if(ComparePose(Hands.HandLeft, pose.LocalRotations)) handedness |= Handedness.Left;
-
-            if(handedness != Handedness.None)
-            {
-                currentPose = pose;
-                currentPose.Handedness = handedness;
-                foundPose = true;
-                break;
-            }
-        }
-        if (!foundPose) currentPose = empty;
-
-        if(Input.GetKeyDown(KeyCode.H))
-        {
-            SavePose(record);
-        }
-    }
-
-    void SavePose(Record record)
-    {
-        if (record == Record.Off) return;
+        if (record == Record.None) return;
 
         HandPose pose = new HandPose();
-        pose.Name = DateTime.Now.ToString();
-        pose.LocalRotations = new List<Quaternion>();
+        pose.name = HandPoseName.New;
+        pose.localPositions = new List<Vector3>();
+        pose.localRotations = new List<Quaternion>();
+        pose.Positions = new List<Vector3>();
+        pose.Rotations = new List<Quaternion>();
+        pose.relativePositions = new List<Vector3>();
+        pose.handedness = Handedness.None;
+
         for (int i = 0; i < Hands.HandRight.Count; i++)
         {
-            if(record == Record.Right) pose.LocalRotations.Add(Hands.HandRight[i].localRotation);
-            else pose.LocalRotations.Add(Hands.HandLeft[i].localRotation);
+            Transform current = Hands.HandRight[i];
+            pose.Positions.Add(current.position);
+            pose.Rotations.Add(current.rotation);
+            pose.localPositions.Add(current.localPosition);
+            pose.localRotations.Add(current.localRotation);
+            pose.relativePositions.Add(Hands.HandRight[1].transform.InverseTransformPoint(current.position));
         }
+        if(record == Record.Left)
+        {
+            for (int i = 0; i < pose.relativePositions.Count; i++)
+            {
+                pose.relativePositions[i] = Vector3.Reflect(pose.relativePositions[i], Vector3.right);
+            }
+        }
+
         Poses.Add(pose);
+    }
+
+    HandPose None = new HandPose();
+
+    private void Update()
+    {
+        if(Input.GetKeyDown(KeyCode.Space))
+        {
+            SavePose();
+        }
+
+        foreach (var pose in Poses)
+        {
+            Handedness handedness = ComparePose(pose);
+            if(handedness!= Handedness.None)
+            {
+                currentPose = pose;
+                currentPose.handedness = handedness;
+                return;
+            }
+        }
+
+        currentPose = None;
     }
 }
